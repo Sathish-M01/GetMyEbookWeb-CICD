@@ -690,7 +690,7 @@ def init_db(app_db_path):
     global app_DB_path
 
     app_DB_path = app_db_path
-    engine = create_engine('sqlite:///{0}'.format(app_db_path), echo=False)
+    engine = create_engine(f'sqlite:///{app_db_path}', echo=False)
 
     Session = scoped_session(sessionmaker())
     Session.configure(bind=engine)

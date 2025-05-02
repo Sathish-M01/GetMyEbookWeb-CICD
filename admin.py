@@ -1340,7 +1340,10 @@ def update_mailsettings():
 #if statement can be using the current_ user. mail
 #The statement is execute the result is equals to sent test mail(current_user.email, current_user.name)
 # if result is false it execute the statement is none(flash(_("Test e-mail queued for sending to %(email)s, please check Tasks for result",
-                        email=current_user.email), category="info")
+    flash(
+    _("Test e-mail queued for sending to %(email)s, please check Tasks for result", email=current_user.email),
+    category="info"
+)
 
     if to_save.get("test"):
         if current_user.email:
