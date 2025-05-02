@@ -1169,7 +1169,7 @@ def pathchooser():
 
 
 def _config_int(to_save, x, func=int):
-     """
+    """
     Save an integer configuration value.
 
     Parameters:
@@ -1180,9 +1180,9 @@ def _config_int(to_save, x, func=int):
     Returns:
     - Result of setting the value in the configuration.
     """
-    
-    # Use the provided function (default is int) to convert the value
-    # and save it in the configuration dictionary.
+
+# Use the provided function (default is int) to convert the value
+# and save it in the configuration dictionary.
     return config.set_from_dictionary(to_save, x, func)
 
 
