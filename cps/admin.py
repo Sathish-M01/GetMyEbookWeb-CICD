@@ -1,64 +1,64 @@
-# -*- coding: utf-8 -*-
+    # -*- coding: utf-8 -*-
 
-#  This file is part of the Calibre-Web (https://github.com/janeczku/calibre-web)  
-#    Copyright (C) 2018-2019 OzzieIsaacs, cervinko, jkrehm, bodybybuddha, ok11,
-#                            andy29485, idalin, Kyosfonica, wuqi, Kennyl, lemmsh,
-#                            falgh1, grunjol, csitko, ytils, xybydy, trasba, vrabe,
-#                            ruben-herold, marblepebble, JackED42, SiphonSquirrel,
-#                            apetresc, nanu-c, mutschler, GammaC0de, vuolter
-#
-#  This program is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program. If not, see <http://www.gnu.org/licenses/>.
+    #  This file is part of the Calibre-Web (https://github.com/janeczku/calibre-web)  
+    #    Copyright (C) 2018-2019 OzzieIsaacs, cervinko, jkrehm, bodybybuddha, ok11,
+    #                            andy29485, idalin, Kyosfonica, wuqi, Kennyl, lemmsh,
+    #                            falgh1, grunjol, csitko, ytils, xybydy, trasba, vrabe,
+    #                            ruben-herold, marblepebble, JackED42, SiphonSquirrel,
+    #                            apetresc, nanu-c, mutschler, GammaC0de, vuolter
+    #
+    #  This program is free software: you can redistribute it and/or modify
+    #  it under the terms of the GNU General Public License as published by
+    #  the Free Software Foundation, either version 3 of the License, or
+    #  (at your option) any later version.
+    #
+    #  This program is distributed in the hope that it will be useful,
+    #  but WITHOUT ANY WARRANTY; without even the implied warranty of
+    #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    #  GNU General Public License for more details.
+    #
+    #  You should have received a copy of the GNU General Public License
+    #  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import re
-import json
-import operator
-import time
-import sys
-import string
-from datetime import datetime, timedelta
-from datetime import time as datetime_time
-from functools import wraps
-from urllib.parse import urlparse
+    import os
+    import re
+    import json
+    import operator
+    import time
+    import sys
+    import string
+    from datetime import datetime, timedelta
+    from datetime import time as datetime_time
+    from functools import wraps
+    from urllib.parse import urlparse
 
-from flask import Blueprint, flash, redirect, url_for, abort, request, make_response, send_from_directory, g, Response
-from markupsafe import Markup
-from .cw_login import current_user
-from flask_babel import gettext as _
-from flask_babel import get_locale, format_time, format_datetime, format_timedelta
-from sqlalchemy import and_
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.exc import IntegrityError, OperationalError, InvalidRequestError
-from sqlalchemy.sql.expression import func, or_, text
+    from flask import Blueprint, flash, redirect, url_for, abort, request, make_response, send_from_directory, g, Response
+    from markupsafe import Markup
+    from .cw_login import current_user
+    from flask_babel import gettext as _
+    from flask_babel import get_locale, format_time, format_datetime, format_timedelta
+    from sqlalchemy import and_
+    from sqlalchemy.orm.attributes import flag_modified
+    from sqlalchemy.exc import IntegrityError, OperationalError, InvalidRequestError
+    from sqlalchemy.sql.expression import func, or_, text
 
-from . import constants, logger, helper, services, cli_param
-from . import db, calibre_db, ub, web_server, config, updater_thread, gdriveutils, \
+    from . import constants, logger, helper, services, cli_param
+    from . import db, calibre_db, ub, web_server, config, updater_thread, gdriveutils, \
     kobo_sync_status, schedule
-from .helper import check_valid_domain, send_test_mail, reset_password, generate_password_hash, check_email, \
+    from .helper import check_valid_domain, send_test_mail, reset_password, generate_password_hash, check_email, \
     valid_email, check_username
-from .embed_helper import get_calibre_binarypath
-from .gdriveutils import is_gdrive_ready, gdrive_support
-from .render_template import render_title_template, get_sidebar_config
-from .services.worker import WorkerThread
-from .usermanagement import user_login_required
-from .babel import get_available_translations, get_available_locale, get_user_locale_language
-from . import debug_info
-from .string_helper import strip_whitespaces
+    from .embed_helper import get_calibre_binarypath
+    from .gdriveutils import is_gdrive_ready, gdrive_support
+    from .render_template import render_title_template, get_sidebar_config
+    from .services.worker import WorkerThread
+    from .usermanagement import user_login_required
+    from .babel import get_available_translations, get_available_locale, get_user_locale_language
+    from . import debug_info
+    from .string_helper import strip_whitespaces
 
-log = logger.create()
+    log = logger.create()
 
-feature_support = {
+    feature_support = {
     'ldap': bool(services.ldap),
     'goodreads': bool(services.goodreads_support),
     'kobo': bool(services.kobo),
@@ -66,29 +66,29 @@ feature_support = {
     'gmail': bool(services.gmail),
     'scheduler': schedule.use_APScheduler,
     'gdrive': gdrive_support
-}
+    }
 
-try:
+    try:
     import rarfile  # pylint: disable=unused-import
 
     feature_support['rar'] = True
-except (ImportError, SyntaxError):
+    except (ImportError, SyntaxError):
     feature_support['rar'] = False
 
-try:
+    try:
     from .oauth_bb import oauth_check, oauthblueprints
 
     feature_support['oauth'] = True
-except ImportError as err:
+    except ImportError as err:
     log.debug('Cannot import Flask-Dance, login with Oauth will not work: %s', err)
     feature_support['oauth'] = False
     oauthblueprints = []
     oauth_check = {}
 
-admi = Blueprint('admin', __name__)
+    admi = Blueprint('admin', __name__)
 
 
-def admin_required(f):
+    def admin_required(f):
     """
     Checks if current_user.role == 1
     """
@@ -102,8 +102,8 @@ def admin_required(f):
     return inner
 
 
-@admi.before_app_request
-def before_request():
+    @admi.before_app_request
+    def before_request():
     #try:
         #if not ub.check_user_session(current_user.id,
         #                             flask_session.get('_id')) and 'opds' not in request.path \
@@ -120,26 +120,26 @@ def before_request():
     g.config_authors_max = config.config_authors_max
     if '/static/' not in request.path and not config.db_configured and \
         request.endpoint not in ('admin.ajax_db_config',
-                                 'admin.simulatedbchange',
-                                 'admin.db_configuration',
-                                 'web.login',
-                                 'web.login_post',
-                                 'web.logout',
-                                 'admin.load_dialogtexts',
-                                 'admin.ajax_pathchooser'):
+                                    'admin.simulatedbchange',
+                                    'admin.db_configuration',
+                                    'web.login',
+                                    'web.login_post',
+                                    'web.logout',
+                                    'admin.load_dialogtexts',
+                                    'admin.ajax_pathchooser'):
         return redirect(url_for('admin.db_configuration'))
 
 
-#@admi.route("/admin")
-#@user_login_required
-#def admin_forbidden():
-#    abort(403)
+    #@admi.route("/admin")
+    #@user_login_required
+    #def admin_forbidden():
+    #    abort(403)
 
 
-@admi.route("/shutdown", methods=["POST"])
-@user_login_required
-@admin_required
-def shutdown():
+    @admi.route("/shutdown", methods=["POST"])
+    @user_login_required
+    @admin_required
+    def shutdown():
     task = request.get_json().get('parameter', -1)
     show_text = {}
     if task in (0, 1):  # valid commandos received
@@ -165,10 +165,10 @@ def shutdown():
     return json.dumps(show_text), 400
 
 
-@admi.route("/metadata_backup", methods=["POST"])
-@user_login_required
-@admin_required
-def queue_metadata_backup():
+    @admi.route("/metadata_backup", methods=["POST"])
+    @user_login_required
+    @admin_required
+    def queue_metadata_backup():
     show_text = {}
     log.warning("Queuing all books for metadata backup")
     helper.set_all_metadata_dirty()
@@ -176,10 +176,10 @@ def queue_metadata_backup():
     return json.dumps(show_text)
 
 
-# method is available without login and not protected by CSRF to make it easy reachable, is per default switched off
-# needed for docker applications, as changes on metadata.db from host are not visible to application
-@admi.route("/reconnect", methods=['GET'])
-def reconnect():
+    # method is available without login and not protected by CSRF to make it easy reachable, is per default switched off
+    # needed for docker applications, as changes on metadata.db from host are not visible to application
+    @admi.route("/reconnect", methods=['GET'])
+    def reconnect():
     if cli_param.reconnect_enable:
         calibre_db.reconnect_db(config, ub.app_DB_path)
         return json.dumps({})
@@ -188,21 +188,21 @@ def reconnect():
         abort(404)
 
 
-@admi.route("/ajax/updateThumbnails", methods=['POST'])
-@admin_required
-@user_login_required
-def update_thumbnails():
+    @admi.route("/ajax/updateThumbnails", methods=['POST'])
+    @admin_required
+    @user_login_required
+    def update_thumbnails():
     content = config.get_scheduled_task_settings()
     if content['schedule_generate_book_covers']:
         log.info("Update of Cover cache requested")
         helper.update_thumbnail_cache()
     return ""
 
-# Define a route for the admin view page that requires user login and admin access
-@admi.route("/admin/view")
-@user_login_required
-@admin_required
-def admin():
+    # Define a route for the admin view page that requires user login and admin access
+    @admi.route("/admin/view")
+    @user_login_required
+    @admin_required
+    def admin():
     # Get the current version information from the updater thread
     version = updater_thread.get_current_version_info()
     # If no version information is available, set the commit as 'Unknown'
@@ -226,72 +226,72 @@ def admin():
             # Adjust the datetime object with the calculated timezone offset and format it
             commit = format_datetime(form_date - tz, format='short')
         else:
-         # If no 'datetime' is present, use the version information and replace "b" with "Beta"
+            # If no 'datetime' is present, use the version information and replace "b" with "Beta"
             commit = version['version'].replace("b", " Beta")
-# Query all users from the database
+    # Query all users from the database
     all_user = ub.session.query(ub.User).all()
     # email_settings = mail_config.get_mail_settings()
     schedule_time = format_time(datetime_time(hour=config.schedule_start_time), format="short")
     # Calculate the schedule duration based on the configured duration in hours and minutes
     t = timedelta(hours=config.schedule_duration // 60, minutes=config.schedule_duration % 60)
     schedule_duration = format_timedelta(t, threshold=.99)
-# Render the admin template with various context variables including users, config, commit, etc
+    # Render the admin template with various context variables including users, config, commit, etc
     return render_title_template("admin.html", allUser=all_user, config=config, commit=commit,
-                                 feature_support=feature_support, schedule_time=schedule_time,
-                                 schedule_duration=schedule_duration,
-                                 title=_("Admin page"), page="admin")
+                                    feature_support=feature_support, schedule_time=schedule_time,
+                                    schedule_duration=schedule_duration,
+                                    title=_("Admin page"), page="admin")
 
 
-@admi.route("/admin/dbconfig", methods=["GET", "POST"])
-@user_login_required
-@admin_required
-def db_configuration():
+    @admi.route("/admin/dbconfig", methods=["GET", "POST"])
+    @user_login_required
+    @admin_required
+    def db_configuration():
     if request.method == "POST":
         return _db_configuration_update_helper()
     return _db_configuration_result()
 
-# Define a route for the admin basic configuration page
-@admi.route("/admin/config", methods=["GET"])
-@user_login_required
-@admin_required
-def configuration():
+    # Define a route for the admin basic configuration page
+    @admi.route("/admin/config", methods=["GET"])
+    @user_login_required
+    @admin_required
+    def configuration():
     # Render the configuration template, passing in relevant configuration and feature support data
     return render_title_template("config_edit.html",
-                                 config=config,
-                                 # OAuth providers
-                                 provider=oauthblueprints,
-                                 # Supported features
-                                 feature_support=feature_support,
-                                 title=_("Basic Configuration"), page="config")
+                                    config=config,
+                                    # OAuth providers
+                                    provider=oauthblueprints,
+                                    # Supported features
+                                    feature_support=feature_support,
+                                    title=_("Basic Configuration"), page="config")
 
 
 
 
-@admi.route("/admin/ajaxconfig", methods=["POST"])
-@user_login_required
-@admin_required
-def ajax_config():
+    @admi.route("/admin/ajaxconfig", methods=["POST"])
+    @user_login_required
+    @admin_required
+    def ajax_config():
     return _configuration_update_helper()
 
 
-@admi.route("/admin/ajaxdbconfig", methods=["POST"])
-@user_login_required
-@admin_required
-def ajax_db_config():
+    @admi.route("/admin/ajaxdbconfig", methods=["POST"])
+    @user_login_required
+    @admin_required
+    def ajax_db_config():
     return _db_configuration_update_helper()
 
 
-@admi.route("/admin/alive", methods=["GET"])
-@user_login_required
-@admin_required
-def calibreweb_alive():
+    @admi.route("/admin/alive", methods=["GET"])
+    @user_login_required
+    @admin_required
+    def calibreweb_alive():
     return "", 200
 
 
-@admi.route("/admin/viewconfig")
-@user_login_required
-@admin_required
-def view_configuration():
+    @admi.route("/admin/viewconfig")
+    @user_login_required
+    @admin_required
+    def view_configuration():
     read_column = calibre_db.session.query(db.CustomColumns) \
         .filter(and_(db.CustomColumns.datatype == 'bool', db.CustomColumns.mark_for_delete == 0)).all()
     restrict_columns = calibre_db.session.query(db.CustomColumns) \
@@ -299,16 +299,16 @@ def view_configuration():
     languages = calibre_db.speaking_language()
     translations = get_available_locale()
     return render_title_template("config_view_edit.html", conf=config, readColumns=read_column,
-                                 restrictColumns=restrict_columns,
-                                 languages=languages,
-                                 translations=translations,
-                                 title=_("UI Configuration"), page="uiconfig")
+                                    restrictColumns=restrict_columns,
+                                    languages=languages,
+                                    translations=translations,
+                                    title=_("UI Configuration"), page="uiconfig")
 
 
-@admi.route("/admin/usertable")
-@user_login_required
-@admin_required
-def edit_user_table():
+    @admi.route("/admin/usertable")
+    @user_login_required
+    @admin_required
+    def edit_user_table():
     visibility = current_user.view_settings.get('useredit', {})
     languages = calibre_db.speaking_language()
     translations = get_available_locale()
@@ -327,23 +327,23 @@ def edit_user_table():
         all_user = all_user.filter(ub.User.role.op('&')(constants.ROLE_ANONYMOUS) != constants.ROLE_ANONYMOUS)
     kobo_support = feature_support['kobo'] and config.config_kobo_sync
     return render_title_template("user_table.html",
-                                 users=all_user.all(),
-                                 tags=tags,
-                                 custom_values=custom_values,
-                                 translations=translations,
-                                 languages=languages,
-                                 visiblility=visibility,
-                                 all_roles=constants.ALL_ROLES,
-                                 kobo_support=kobo_support,
-                                 sidebar_settings=constants.sidebar_settings,
-                                 title=_("Edit Users"),
-                                 page="usertable")
+                                    users=all_user.all(),
+                                    tags=tags,
+                                    custom_values=custom_values,
+                                    translations=translations,
+                                    languages=languages,
+                                    visiblility=visibility,
+                                    all_roles=constants.ALL_ROLES,
+                                    kobo_support=kobo_support,
+                                    sidebar_settings=constants.sidebar_settings,
+                                    title=_("Edit Users"),
+                                    page="usertable")
 
 
-@admi.route("/ajax/listusers")
-@user_login_required
-@admin_required
-def list_users():
+    @admi.route("/ajax/listusers")
+    @user_login_required
+    @admin_required
+    def list_users():
     off = int(request.args.get("offset") or 0)
     limit = int(request.args.get("limit") or 10)
     search = request.args.get("search")
@@ -369,8 +369,8 @@ def list_users():
 
     if search:
         all_user = all_user.filter(or_(func.lower(ub.User.name).ilike("%" + search + "%"),
-                                       func.lower(ub.User.kindle_mail).ilike("%" + search + "%"),
-                                       func.lower(ub.User.email).ilike("%" + search + "%")))
+                                        func.lower(ub.User.kindle_mail).ilike("%" + search + "%"),
+                                        func.lower(ub.User.email).ilike("%" + search + "%")))
     if state:
         users = calibre_db.get_checkbox_sorted(all_user.all(), state, off, limit, request.args.get("order", "").lower())
     else:
@@ -391,31 +391,31 @@ def list_users():
     return response
 
 
-@admi.route("/ajax/deleteuser", methods=['POST'])
-@user_login_required
-@admin_required
-def delete_user():
+    @admi.route("/ajax/deleteuser", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def delete_user():
     # Get user IDs from form data
     user_ids = request.form.to_dict(flat=False)
     users = None
     message = ""
-    
+
     # Determine if multiple or single user ID(s) are provided
     if "userid[]" in user_ids:
         users = ub.session.query(ub.User).filter(ub.User.id.in_(user_ids['userid[]'])).all()
     elif "userid" in user_ids:
         users = ub.session.query(ub.User).filter(ub.User.id == user_ids['userid'][0]).all()
-    
+
     # Initialize counters and response lists
     count = 0
     errors = []
     success = []
-    
+
     # Return error if no users are found
     if not users:
         log.error("User not found")
         return Response(json.dumps({'type': "danger", 'message': _("User not found")}), mimetype='application/json')
-    
+
     # Attempt to delete each user in the list
     for user in users:
         try:
@@ -424,7 +424,7 @@ def delete_user():
         except Exception as ex:
             log.error(f"Error deleting user {user.id}: {ex}")
             errors.append({'type': "danger", 'message': f"Failed to delete user {user.id}: {str(ex)}"})
-    
+
     # Prepare success messages based on count
     if count == 1:
         log.info(f"User {user_ids} deleted")
@@ -432,16 +432,16 @@ def delete_user():
     elif count > 1:
         log.info(f"Users {user_ids} deleted")
         success = [{'type': "success", 'message': _("{} users deleted successfully").format(count)}]
-    
+
     # Combine success and error messages for response
     response_data = success + errors
     return Response(json.dumps(response_data), mimetype='application/json')
 
 
-@admi.route("/ajax/getlocale")
-@user_login_required
-@admin_required
-def table_get_locale():
+    @admi.route("/ajax/getlocale")
+    @user_login_required
+    @admin_required
+    def table_get_locale():
     locale = get_available_locale()
     ret = list()
     current_locale = get_locale()
@@ -450,10 +450,10 @@ def table_get_locale():
     return json.dumps(ret)
 
 
-@admi.route("/ajax/getdefaultlanguage")
-@user_login_required
-@admin_required
-def table_get_default_lang():
+    @admi.route("/ajax/getdefaultlanguage")
+    @user_login_required
+    @admin_required
+    def table_get_default_lang():
     languages = calibre_db.speaking_language()
     ret = list()
     ret.append({'value': 'all', 'text': _('Show All')})
@@ -466,13 +466,13 @@ def table_get_default_lang():
 
 
 
-# Define a route that accepts POST requests with a parameter 'param'.
+    # Define a route that accepts POST requests with a parameter 'param'.
 
 
-@admi.route("/ajax/editlistusers/<param>", methods=['POST'])
-@user_login_required
-@admin_required
-def edit_list_user(param):
+    @admi.route("/ajax/editlistusers/<param>", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def edit_list_user(param):
     vals = request.form.to_dict(flat=False)
     all_user = ub.session.query(ub.User)
     if not config.config_anonbrowse:
@@ -513,7 +513,7 @@ def edit_list_user(param):
                 elif param.endswith('role'):
                     value = int(vals['field_index'])
                     if user.name == "Guest" and value in \
-                      [constants.ROLE_ADMIN, constants.ROLE_PASSWD, constants.ROLE_EDIT_SHELFS]:
+                        [constants.ROLE_ADMIN, constants.ROLE_PASSWD, constants.ROLE_EDIT_SHELFS]:
                         raise Exception(_("Guest can't have this role"))
                     # check for valid value, last on checks for power of 2 value
                     if value > 0 and value <= constants.ROLE_VIEWER and (value & value - 1 == 0 or value == 1):
@@ -523,11 +523,11 @@ def edit_list_user(param):
                             if value == constants.ROLE_ADMIN:
                                 if not ub.session.query(ub.User). \
                                     filter(ub.User.role.op('&')(constants.ROLE_ADMIN) == constants.ROLE_ADMIN,
-                                           ub.User.id != user.id).count():
+                                            ub.User.id != user.id).count():
                                     return Response(
                                         json.dumps([{'type': "danger",
-                                                     'message': _("No admin user remaining, can't remove admin role",
-                                                                  nick=user.name)}]), mimetype='application/json')
+                                                        'message': _("No admin user remaining, can't remove admin role",
+                                                                    nick=user.name)}]), mimetype='application/json')
                             user.role &= ~value
                         else:
                             raise Exception(_("Value has to be true or false"))
@@ -574,10 +574,10 @@ def edit_list_user(param):
     return ""
 
 
-@admi.route("/ajax/user_table_settings", methods=['POST'])
-@user_login_required
-@admin_required
-def update_table_settings():
+    @admi.route("/ajax/user_table_settings", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def update_table_settings():
     current_user.view_settings['useredit'] = json.loads(request.data)
     try:
         try:
@@ -591,10 +591,10 @@ def update_table_settings():
     return ""
 
 
-@admi.route("/admin/viewconfig", methods=["POST"])
-@user_login_required
-@admin_required
-def update_view_configuration():
+    @admi.route("/admin/viewconfig", methods=["POST"])
+    @user_login_required
+    @admin_required
+    def update_view_configuration():
     to_save = request.form.to_dict()
 
     _config_string(to_save, "config_calibre_web_title")
@@ -636,9 +636,9 @@ def update_view_configuration():
     return view_configuration()
 
 
-@admi.route("/ajax/loaddialogtexts/<element_id>", methods=['POST'])
-@user_login_required
-def load_dialogtexts(element_id):
+    @admi.route("/ajax/loaddialogtexts/<element_id>", methods=['POST'])
+    @user_login_required
+    def load_dialogtexts(element_id):
     texts = {"header": "", "main": "", "valid": 1}
     if element_id == "config_delete_kobo_token":
         texts["main"] = _('Do you really want to delete the Kobo Token?')
@@ -658,24 +658,24 @@ def load_dialogtexts(element_id):
         texts["main"] = _('Are you sure you want to change the selected restrictions for the selected user(s)?')
     elif element_id == "sidebar_view":
         texts["main"] = _('Are you sure you want to change the selected visibility restrictions '
-                          'for the selected user(s)?')
+                            'for the selected user(s)?')
     elif element_id == "kobo_only_shelves_sync":
         texts["main"] = _('Are you sure you want to change shelf sync behavior for the selected user(s)?')
     elif element_id == "db_submit":
         texts["main"] = _('Are you sure you want to change Calibre library location?')
     elif element_id == "admin_refresh_cover_cache":
         texts["main"] = _('Calibre-Web will search for updated Covers '
-                          'and update Cover Thumbnails, this may take a while?')
+                            'and update Cover Thumbnails, this may take a while?')
     elif element_id == "btnfullsync":
         texts["main"] = _("Are you sure you want delete Calibre-Web's sync database "
-                          "to force a full sync with your Kobo Reader?")
+                            "to force a full sync with your Kobo Reader?")
     return json.dumps(texts)
 
 
-@admi.route("/ajax/editdomain/<int:allow>", methods=['POST'])
-@user_login_required
-@admin_required
-def edit_domain(allow):
+    @admi.route("/ajax/editdomain/<int:allow>", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def edit_domain(allow):
     # POST /post
     # name:  'username',  //name of field (column in db)
     # pk:    1            //primary key (record id)
@@ -686,10 +686,10 @@ def edit_domain(allow):
     return ub.session_commit("Registering Domains edited {}".format(answer.domain))
 
 
-@admi.route("/ajax/adddomain/<int:allow>", methods=['POST'])
-@user_login_required
-@admin_required
-def add_domain(allow):
+    @admi.route("/ajax/adddomain/<int:allow>", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def add_domain(allow):
     domain_name = request.form.to_dict()['domainname'].replace('*', '%').replace('?', '_').lower()
     check = ub.session.query(ub.Registration).filter(ub.Registration.domain == domain_name) \
         .filter(ub.Registration.allow == allow).first()
@@ -700,10 +700,10 @@ def add_domain(allow):
     return ""
 
 
-@admi.route("/ajax/deletedomain", methods=['POST'])
-@user_login_required
-@admin_required
-def delete_domain():
+    @admi.route("/ajax/deletedomain", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def delete_domain():
     try:
         domain_id = request.form.to_dict()['domainid'].replace('*', '%').replace('?', '_').lower()
         ub.session.query(ub.Registration).filter(ub.Registration.id == domain_id).delete()
@@ -718,10 +718,10 @@ def delete_domain():
     return ""
 
 
-@admi.route("/ajax/domainlist/<int:allow>")
-@user_login_required
-@admin_required
-def list_domain(allow):
+    @admi.route("/ajax/domainlist/<int:allow>")
+    @user_login_required
+    @admin_required
+    def list_domain(allow):
     answer = ub.session.query(ub.Registration).filter(ub.Registration.allow == allow).all()
     json_dumps = json.dumps([{"domain": r.domain.replace('%', '*').replace('_', '?'), "id": r.id} for r in answer])
     js = json.dumps(json_dumps.replace('"', "'")).strip('"')
@@ -730,11 +730,11 @@ def list_domain(allow):
     return response
 
 
-@admi.route("/ajax/editrestriction/<int:res_type>", defaults={"user_id": 0}, methods=['POST'])
-@admi.route("/ajax/editrestriction/<int:res_type>/<int:user_id>", methods=['POST'])
-@user_login_required
-@admin_required
-def edit_restriction(res_type, user_id):
+    @admi.route("/ajax/editrestriction/<int:res_type>", defaults={"user_id": 0}, methods=['POST'])
+    @admi.route("/ajax/editrestriction/<int:res_type>/<int:user_id>", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def edit_restriction(res_type, user_id):
     element = request.form.to_dict()
     if element['id'].startswith('a'):
         if res_type == 0:  # Tags as template
@@ -797,19 +797,19 @@ def edit_restriction(res_type, user_id):
     return ""
 
 
-@admi.route("/ajax/addrestriction/<int:res_type>", methods=['POST'])
-@user_login_required
-@admin_required
-def add_user_0_restriction(res_type):
+    @admi.route("/ajax/addrestriction/<int:res_type>", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def add_user_0_restriction(res_type):
     # This function is a wrapper for adding a restriction with a default user ID of 0.
     # It uses the `add_restriction` function with a specified restriction type (`res_type`)
     # and assigns it to the default user ID 0.
     return add_restriction(res_type, 0)
 
-@admi.route("/ajax/addrestriction/<int:res_type>/<int:user_id>", methods=['POST'])
-@user_login_required
-@admin_required
-def add_restriction(res_type, user_id):
+    @admi.route("/ajax/addrestriction/<int:res_type>/<int:user_id>", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def add_restriction(res_type, user_id):
     # Main function to add different types of restrictions to specified users or elements
     # `res_type` determines the type of restriction to add, while `user_id` specifies the target user (0 for default)
 
@@ -869,19 +869,19 @@ def add_restriction(res_type, user_id):
 
     return ""  # Return an empty response after the restriction is added
 
-@admi.route("/ajax/deleterestriction/<int:res_type>", methods=['POST'])
-@user_login_required
-@admin_required
-def delete_user_0_restriction(res_type):
+    @admi.route("/ajax/deleterestriction/<int:res_type>", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def delete_user_0_restriction(res_type):
     # Wrapper function to delete a restriction for the default user ID (0).
     # Calls `delete_restriction` with `res_type` and default user ID 0.
     return delete_restriction(res_type, 0)
 
 
-@admi.route("/ajax/deleterestriction/<int:res_type>/<int:user_id>", methods=['POST'])
-@user_login_required
-@admin_required
-def delete_restriction(res_type, user_id):
+    @admi.route("/ajax/deleterestriction/<int:res_type>/<int:user_id>", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def delete_restriction(res_type, user_id):
     # Main function to delete specific types of restrictions for a given user ID
     # `res_type` specifies the type of restriction to delete, and `user_id` targets a specific user.
 
@@ -942,22 +942,22 @@ def delete_restriction(res_type, user_id):
     return ""  # Return an empty response after deletion
 
 
-@admi.route("/ajax/listrestriction/<int:res_type>", defaults={"user_id": 0})
-@admi.route("/ajax/listrestriction/<int:res_type>/<int:user_id>")
-@user_login_required
-@admin_required
-def list_restriction(res_type, user_id):
+    @admi.route("/ajax/listrestriction/<int:res_type>", defaults={"user_id": 0})
+    @admi.route("/ajax/listrestriction/<int:res_type>/<int:user_id>")
+    @user_login_required
+    @admin_required
+    def list_restriction(res_type, user_id):
     if res_type == 0:  # Tags as template
         restrict = [{'Element': x, 'type': _('Deny'), 'id': 'd' + str(i)}
                     for i, x in enumerate(config.list_denied_tags()) if x != '']
         allow = [{'Element': x, 'type': _('Allow'), 'id': 'a' + str(i)}
-                 for i, x in enumerate(config.list_allowed_tags()) if x != '']
+                    for i, x in enumerate(config.list_allowed_tags()) if x != '']
         json_dumps = restrict + allow
     elif res_type == 1:  # CustomC as template
         restrict = [{'Element': x, 'type': _('Deny'), 'id': 'd' + str(i)}
                     for i, x in enumerate(config.list_denied_column_values()) if x != '']
         allow = [{'Element': x, 'type': _('Allow'), 'id': 'a' + str(i)}
-                 for i, x in enumerate(config.list_allowed_column_values()) if x != '']
+                    for i, x in enumerate(config.list_allowed_column_values()) if x != '']
         json_dumps = restrict + allow
     elif res_type == 2:  # Tags per user
         if isinstance(user_id, int):
@@ -967,7 +967,7 @@ def list_restriction(res_type, user_id):
         restrict = [{'Element': x, 'type': _('Deny'), 'id': 'd' + str(i)}
                     for i, x in enumerate(usr.list_denied_tags()) if x != '']
         allow = [{'Element': x, 'type': _('Allow'), 'id': 'a' + str(i)}
-                 for i, x in enumerate(usr.list_allowed_tags()) if x != '']
+                    for i, x in enumerate(usr.list_allowed_tags()) if x != '']
         json_dumps = restrict + allow
     elif res_type == 3:  # CustomC per user
         if isinstance(user_id, int):
@@ -977,7 +977,7 @@ def list_restriction(res_type, user_id):
         restrict = [{'Element': x, 'type': _('Deny'), 'id': 'd' + str(i)}
                     for i, x in enumerate(usr.list_denied_column_values()) if x != '']
         allow = [{'Element': x, 'type': _('Allow'), 'id': 'a' + str(i)}
-                 for i, x in enumerate(usr.list_allowed_column_values()) if x != '']
+                    for i, x in enumerate(usr.list_allowed_column_values()) if x != '']
         json_dumps = restrict + allow
     else:
         json_dumps = ""
@@ -987,50 +987,50 @@ def list_restriction(res_type, user_id):
     return response
 
 
-@admi.route("/ajax/fullsync", methods=["POST"])
-@user_login_required
-def ajax_self_fullsync():
+    @admi.route("/ajax/fullsync", methods=["POST"])
+    @user_login_required
+    def ajax_self_fullsync():
     return do_full_kobo_sync(current_user.id)
 
 
-@admi.route("/ajax/fullsync/<int:userid>", methods=["POST"])
-@user_login_required
-@admin_required
-def ajax_fullsync(userid):
+    @admi.route("/ajax/fullsync/<int:userid>", methods=["POST"])
+    @user_login_required
+    @admin_required
+    def ajax_fullsync(userid):
     return do_full_kobo_sync(userid)
 
 
-@admi.route("/ajax/pathchooser/")
-@user_login_required
-@admin_required
-def ajax_pathchooser():
+    @admi.route("/ajax/pathchooser/")
+    @user_login_required
+    @admin_required
+    def ajax_pathchooser():
     return pathchooser()
 
 
-def do_full_kobo_sync(userid):
+    def do_full_kobo_sync(userid):
     count = ub.session.query(ub.KoboSyncedBooks).filter(userid == ub.KoboSyncedBooks.user_id).delete()
     message = _("{} sync entries deleted").format(count)
     ub.session_commit(message)
     return Response(json.dumps([{"type": "success", "message": message}]), mimetype='application/json')
 
 
-def check_valid_read_column(column):
+    def check_valid_read_column(column):
     if column != "0":
         if not calibre_db.session.query(db.CustomColumns).filter(db.CustomColumns.id == column) \
-          .filter(and_(db.CustomColumns.datatype == 'bool', db.CustomColumns.mark_for_delete == 0)).all():
+            .filter(and_(db.CustomColumns.datatype == 'bool', db.CustomColumns.mark_for_delete == 0)).all():
             return False
     return True
 
 
-def check_valid_restricted_column(column):
+    def check_valid_restricted_column(column):
     if column != "0":
         if not calibre_db.session.query(db.CustomColumns).filter(db.CustomColumns.id == column) \
-          .filter(and_(db.CustomColumns.datatype == 'text', db.CustomColumns.mark_for_delete == 0)).all():
+            .filter(and_(db.CustomColumns.datatype == 'text', db.CustomColumns.mark_for_delete == 0)).all():
             return False
     return True
 
 
-def restriction_addition(element, list_func):
+    def restriction_addition(element, list_func):
     elementlist = list_func()
     if elementlist == ['']:
         elementlist = []
@@ -1039,14 +1039,14 @@ def restriction_addition(element, list_func):
     return ','.join(elementlist)
 
 
-def restriction_deletion(element, list_func):
+    def restriction_deletion(element, list_func):
     elementlist = list_func()
     if element['Element'] in elementlist:
         elementlist.remove(element['Element'])
     return ','.join(elementlist)
 
 
-def prepare_tags(user, action, tags_name, id_list):
+    def prepare_tags(user, action, tags_name, id_list):
     if "tags" in tags_name:
         tags = calibre_db.session.query(db.Tags).filter(db.Tags.id.in_(id_list)).all()
         if not tags:
@@ -1066,7 +1066,7 @@ def prepare_tags(user, action, tags_name, id_list):
     return ",".join(saved_tags_list)
 
 
-def get_drives(current):
+    def get_drives(current):
     drive_letters = []
     for d in string.ascii_uppercase:
         if os.path.exists('{}:'.format(d)) and current[0].lower() != d.lower():
@@ -1076,7 +1076,7 @@ def get_drives(current):
     return drive_letters
 
 
-def pathchooser():
+    def pathchooser():
     # Define the type of browsing (folder or file)
     browse_for = "folder"
     # Check if only folders should be returned
@@ -1111,7 +1111,7 @@ def pathchooser():
         parent_dir = os.path.relpath(parent_dir) + os.path.sep # Append separator
 
     files = []       # Initialize list to store files and directories
- # Check if we're at the root directory
+    # Check if we're at the root directory
     if os.path.realpath(cwd) == os.path.realpath("/") \
             or (sys.platform == "win32" and os.path.realpath(cwd)[1:] == os.path.realpath("/")[1:]):
         # we are in root
@@ -1119,7 +1119,7 @@ def pathchooser():
         if sys.platform == "win32":
             files = get_drives(cwd)           # Get available drives on Windows
 
-         # Attempt to list directories and files in the current working directory
+            # Attempt to list directories and files in the current working directory
     try:
         folders = os.listdir(cwd)
     except Exception:
@@ -1142,7 +1142,7 @@ def pathchooser():
                 continue       # Skip if file doesn't match the filter
             data["type"] = "file"    # Set type to file
             data["size"] = os.path.getsize(os.path.join(cwd, f))
-               # Format file size for readability
+                # Format file size for readability
             power = 0
             while (data["size"] >> 10) > 0.3:
                 power += 1
@@ -1154,9 +1154,9 @@ def pathchooser():
             data["size"] = ""       # No size for directories
 
         files.append(data)    # Add item to the list
-     # Sort files and directories by type and name
+        # Sort files and directories by type and name
     files = sorted(files, key=operator.itemgetter("type", "sort"))
-     # Prepare the context for JSON response
+        # Prepare the context for JSON response
     context = {
         "cwd": cwd,            # Current working directory
         "files": files,         # List of files and directories
@@ -1168,7 +1168,7 @@ def pathchooser():
     return json.dumps(context)  # Return the context as a JSON response
 
 
-def _config_int(to_save, x, func=int):
+    def _config_int(to_save, x, func=int):
     """
     Save an integer configuration value.
 
@@ -1181,12 +1181,12 @@ def _config_int(to_save, x, func=int):
     - Result of setting the value in the configuration.
     """
 
-# Use the provided function (default is int) to convert the value
-# and save it in the configuration dictionary.
+    # Use the provided function (default is int) to convert the value
+    # and save it in the configuration dictionary.
     return config.set_from_dictionary(to_save, x, func)
 
 
-def _config_checkbox(to_save, x):
+    def _config_checkbox(to_save, x):
     """
     Save a checkbox configuration value as a boolean.
 
@@ -1197,14 +1197,14 @@ def _config_checkbox(to_save, x):
     Returns:
     - Result of setting the boolean value in the configuration.
     """
-    
+
     # Convert the value from the dictionary to a boolean based on the string "on"
-    
+
     return config.set_from_dictionary(to_save, x, lambda y: y == "on", False)
 
 
-def _config_checkbox_int(to_save, x):
-     """
+    def _config_checkbox_int(to_save, x):
+        """
     Save a checkbox configuration value as an integer (0 or 1).
 
     Parameters:
@@ -1214,16 +1214,16 @@ def _config_checkbox_int(to_save, x):
     Returns:
     - Result of setting the integer value in the configuration.
     """
-    
+
     # Convert the value from the dictionary to an integer: 1 if "on", otherwise 0
     return config.set_from_dictionary(to_save, x, lambda y: 1 if (y == "on") else 0, 0)
 
 
-def _config_string(to_save, x):
+    def _config_string(to_save, x):
     return config.set_from_dictionary(to_save, x, lambda y: strip_whitespaces(y) if y else y)
 
 
-def _configuration_gdrive_helper(to_save):
+    def _configuration_gdrive_helper(to_save):
     gdrive_error = None
     if to_save.get("config_use_google_drive"):
         gdrive_secrets = {}
@@ -1253,13 +1253,13 @@ def _configuration_gdrive_helper(to_save):
         gdriveutils.deleteDatabaseOnChange()
     return gdrive_error
 
-#This function input paramters is to_save object 
-#This function will return bollean type.
-def _configuration_oauth_helper(to_save):
+    #This function input paramters is to_save object 
+    #This function will return bollean type.
+    def _configuration_oauth_helper(to_save):
     # Initialize counters and flags
     active_oauths = 0
     reboot_required = False
-    
+
     # Helper function to construct the keys for accessing the configuration
     def get_key(provider_id, suffix):
         return f"config_{provider_id}_{suffix}"
@@ -1302,19 +1302,19 @@ def _configuration_oauth_helper(to_save):
 
 
 
-def _configuration_logfile_helper(to_save):
+    def _configuration_logfile_helper(to_save):
     reboot_required = False
     reboot_required |= _config_int(to_save, "config_log_level")
     reboot_required |= _config_string(to_save, "config_logfile")
     if not logger.is_valid_logfile(config.config_logfile):
         return reboot_required, \
-               _configuration_result(_('Logfile Location is not Valid, Please Enter Correct Path'))
+                _configuration_result(_('Logfile Location is not Valid, Please Enter Correct Path'))
 
     reboot_required |= _config_checkbox_int(to_save, "config_access_log")
     reboot_required |= _config_string(to_save, "config_access_logfile")
     if not logger.is_valid_logfile(config.config_access_logfile):
         return reboot_required, \
-               _configuration_result(_('Access Logfile Location is not Valid, Please Enter Correct Path'))
+                _configuration_result(_('Access Logfile Location is not Valid, Please Enter Correct Path'))
     return reboot_required, None
 
 
@@ -1322,11 +1322,11 @@ def _configuration_logfile_helper(to_save):
 
 
 
-#This function using ldap is a protocal
-#This function input Parameter is to_save object
+    #This function using ldap is a protocal
+    #This function input Parameter is to_save object
 
 
-def _configuration_ldap_helper(to_save):
+    def _configuration_ldap_helper(to_save):
     # Initialize a flag to track if a reboot is required
     reboot_required = False
 
@@ -1358,9 +1358,9 @@ def _configuration_ldap_helper(to_save):
 
     # Validate essential LDAP configuration fields
     if not config.config_ldap_provider_url \
-      or not config.config_ldap_port \
-      or not config.config_ldap_dn \
-      or not config.config_ldap_user_object:
+        or not config.config_ldap_port \
+        or not config.config_ldap_dn \
+        or not config.config_ldap_user_object:
         return reboot_required, _configuration_result(_('Please Enter a LDAP Provider, '
                                                         'Port, DN and User Object Identifier'))
 
@@ -1382,13 +1382,13 @@ def _configuration_ldap_helper(to_save):
     if config.config_ldap_group_object_filter:
         if config.config_ldap_group_object_filter.count("%s") != 1:
             return reboot_required, \
-                   _configuration_result(_('LDAP Group Object Filter Needs to Have One "%s" Format Identifier'))
+                    _configuration_result(_('LDAP Group Object Filter Needs to Have One "%s" Format Identifier'))
         if config.config_ldap_group_object_filter.count("(") != config.config_ldap_group_object_filter.count(")"):
             return reboot_required, _configuration_result(_('LDAP Group Object Filter Has Unmatched Parenthesis'))
 
     if config.config_ldap_user_object.count("%s") != 1:
         return reboot_required, \
-               _configuration_result(_('LDAP User Object Filter needs to Have One "%s" Format Identifier'))
+                _configuration_result(_('LDAP User Object Filter needs to Have One "%s" Format Identifier'))
     if config.config_ldap_user_object.count("(") != config.config_ldap_user_object.count(")"):
         return reboot_required, _configuration_result(_('LDAP User Object Filter Has Unmatched Parenthesis'))
 
@@ -1397,7 +1397,7 @@ def _configuration_ldap_helper(to_save):
     else:
         if config.config_ldap_member_user_object.count("%s") != 1:
             return reboot_required, \
-                   _configuration_result(_('LDAP Member User Filter needs to Have One "%s" Format Identifier'))
+                    _configuration_result(_('LDAP Member User Filter needs to Have One "%s" Format Identifier'))
         if config.config_ldap_member_user_object.count("(") != config.config_ldap_member_user_object.count(")"):
             return reboot_required, _configuration_result(_('LDAP Member User Filter Has Unmatched Parenthesis'))
 
@@ -1406,23 +1406,23 @@ def _configuration_ldap_helper(to_save):
                 os.path.isfile(config.config_ldap_cert_path) and
                 os.path.isfile(config.config_ldap_key_path)):
             return reboot_required, \
-                   _configuration_result(_('LDAP CACertificate, Certificate or Key Location is not Valid, '
-                                           'Please Enter Correct Path'))
+                    _configuration_result(_('LDAP CACertificate, Certificate or Key Location is not Valid, '
+                                            'Please Enter Correct Path'))
     return reboot_required, None
 
 
-@admi.route("/ajax/simulatedbchange", methods=['POST'])
-@user_login_required
-@admin_required
-def simulatedbchange():
+    @admi.route("/ajax/simulatedbchange", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def simulatedbchange():
     db_change, db_valid = _db_simulate_change()
     return Response(json.dumps({"change": db_change, "valid": db_valid}), mimetype='application/json')
 
 
-@admi.route("/admin/user/new", methods=["GET", "POST"])
-@user_login_required
-@admin_required
-def new_user():
+    @admi.route("/admin/user/new", methods=["GET", "POST"])
+    @user_login_required
+    @admin_required
+    def new_user():
     content = ub.User()
     languages = calibre_db.speaking_language()
     translations = get_available_locale()
@@ -1436,30 +1436,30 @@ def new_user():
         content.locale = config.config_default_locale
         content.default_language = config.config_default_language
     return render_title_template("user_edit.html", new_user=1, content=content,
-                                 config=config, translations=translations,
-                                 languages=languages, title=_("Add New User"), page="newuser",
-                                 kobo_support=kobo_support, registered_oauth=oauth_check)
+                                    config=config, translations=translations,
+                                    languages=languages, title=_("Add New User"), page="newuser",
+                                    kobo_support=kobo_support, registered_oauth=oauth_check)
 
 
-@admi.route("/admin/mailsettings", methods=["GET"])
-@user_login_required
-@admin_required
-def edit_mailsettings():
+    @admi.route("/admin/mailsettings", methods=["GET"])
+    @user_login_required
+    @admin_required
+    def edit_mailsettings():
     content = config.get_mail_settings()
     return render_title_template("email_edit.html", content=content, title=_("Edit Email Server Settings"),
-                                 page="mailset", feature_support=feature_support)
+                                    page="mailset", feature_support=feature_support)
 
 
-@admi.route("/admin/mailsettings", methods=["POST"])
-@user_login_required
-@admin_required
-#The mail setting can be used to collect the mail information
-#The function will be return edit mail setting object
-#The mail will be config the mail
-def update_mailsettings():
+    @admi.route("/admin/mailsettings", methods=["POST"])
+    @user_login_required
+    @admin_required
+    #The mail setting can be used to collect the mail information
+    #The function will be return edit mail setting object
+    #The mail will be config the mail
+    def update_mailsettings():
     to_save = request.form.to_dict()
     _config_int(to_save, "mail_server_type")
-#If statements contains the parameter value is invaliate
+    #If statements contains the parameter value is invaliate
     if to_save.get("invalidate"):
         config.mail_gmail_token = {}
         try:
@@ -1474,11 +1474,11 @@ def update_mailsettings():
             flash(str(ex), category="error")
             log.error(ex)
             return edit_mailsettings()
-#The else statements using the parameter is to save mail use port and mail use ssl
-#The mail server is config the mail server equal to strip whitespaces to_save.get('mail_server')
-#The mail from is config the mail is equal to strip whitespaces (to_save.get('mail_from', ""))
-#The mail login is config the mail is equal to strip whitespaces (to_save.get('mail_login', ""))
-# The if and else can return the value is edit mail setting
+    #The else statements using the parameter is to save mail use port and mail use ssl
+    #The mail server is config the mail server equal to strip whitespaces to_save.get('mail_server')
+    #The mail from is config the mail is equal to strip whitespaces (to_save.get('mail_from', ""))
+    #The mail login is config the mail is equal to strip whitespaces (to_save.get('mail_login', ""))
+    # The if and else can return the value is edit mail setting
 
     else:
         _config_int(to_save, "mail_port")
@@ -1489,9 +1489,9 @@ def update_mailsettings():
         config.mail_server = strip_whitespaces(to_save.get('mail_server', ""))
         config.mail_from = strip_whitespaces(to_save.get('mail_from', ""))
         config.mail_login = strip_whitespaces(to_save.get('mail_login', "")) 
-#try block can be using the parameter is operational error and invalid request error as e
-#This function will be return the statement is edit mail setting
-#This try block using the exception as e
+    #try block can be using the parameter is operational error and invalid request error as e
+    #This function will be return the statement is edit mail setting
+    #This try block using the exception as e
     try:
         config.save()
     except (OperationalError, InvalidRequestError) as e:
@@ -1502,9 +1502,9 @@ def update_mailsettings():
     except Exception as e:
         flash(_("Oops! Database Error: %(error)s.", error=e.orig), category="error")
         return edit_mailsettings()
-#if statement can be using the current_ user. mail
-#The statement is execute the result is equals to sent test mail(current_user.email, current_user.name)
-# if result is false it execute the statement is none(flash(_("Test e-mail queued for sending to %(email)s, please check Tasks for result",
+    #if statement can be using the current_ user. mail
+    #The statement is execute the result is equals to sent test mail(current_user.email, current_user.name)
+    # if result is false it execute the statement is none(flash(_("Test e-mail queued for sending to %(email)s, please check Tasks for result",
                         email=current_user.email), category="info")
 
     if to_save.get("test"):
@@ -1517,8 +1517,8 @@ def update_mailsettings():
                 flash(_("There was an error sending the Test e-mail: %(res)s", res=result), category="error")
         else:
             flash(_("Please configure your e-mail address first..."), category="error")
-#else statement is using the func is flash and the category is success
-#The return tyep is edit mail settings 
+    #else statement is using the func is flash and the category is success
+    #The return tyep is edit mail settings 
 
     else:
         flash(_("Email Server Settings updated"), category="success")
@@ -1526,13 +1526,13 @@ def update_mailsettings():
     return edit_mailsettings()
 
 
-@admi.route("/admin/scheduledtasks")
-@user_login_required
-@admin_required
-#Edit scheduledtask using the range function is 24
-#The start val is5,step val is 65,step val is 5
-#The return type is render title template
-def edit_scheduledtasks():
+    @admi.route("/admin/scheduledtasks")
+    @user_login_required
+    @admin_required
+    #Edit scheduledtask using the range function is 24
+    #The start val is5,step val is 65,step val is 5
+    #The return type is render title template
+    def edit_scheduledtasks():
     content = config.get_scheduled_task_settings()
     time_field = list()
     duration_field = list()
@@ -1544,20 +1544,20 @@ def edit_scheduledtasks():
         duration_field.append((n, format_timedelta(t, threshold=.97)))
 
     return render_title_template("schedule_edit.html",
-                                 config=content,
-                                 starttime=time_field,
-                                 duration=duration_field,
-                                 title=_("Edit Scheduled Tasks Settings"))
+                                    config=content,
+                                    starttime=time_field,
+                                    duration=duration_field,
+                                    title=_("Edit Scheduled Tasks Settings"))
 
 
-@admi.route("/admin/scheduledtasks", methods=["POST"])
-@user_login_required
-@admin_required
-#Update scheduledtask can be using if and else function
-#The if function return the true value
-#if not else function will be return the value
-#The return type is editscheduled task
-def update_scheduledtasks():
+    @admi.route("/admin/scheduledtasks", methods=["POST"])
+    @user_login_required
+    @admin_required
+    #Update scheduledtask can be using if and else function
+    #The if function return the true value
+    #if not else function will be return the value
+    #The return type is editscheduled task
+    def update_scheduledtasks():
     error = False
     to_save = request.form.to_dict()
     if 0 <= int(to_save.get("schedule_start_time")) <= 23:
@@ -1576,7 +1576,7 @@ def update_scheduledtasks():
     _config_checkbox(to_save, "schedule_reconnect")
 
     if not error:
- #try block can be perform the config.save operation
+    #try block can be perform the config.save operation
         try:
             config.save()
             flash(_("Scheduled tasks settings updated"), category="success")
@@ -1586,14 +1586,14 @@ def update_scheduledtasks():
 
             # Re-register tasks with new settings
             schedule.register_scheduled_tasks(config.schedule_reconnect)
-#except integrityerror using ub.sesssion.rollback
+    #except integrityerror using ub.sesssion.rollback
         except IntegrityError:
             ub.session.rollback()
             log.error("An unknown error occurred while saving scheduled tasks settings")
             flash(_("Oops! An unknown error occurred. Please try again later."), category="error")
-#except operational error is also using the ub.sesion.rollback
-#The log.error("Settings DB is not Writeable")
-#The return type is edit_scheduledtask()
+    #except operational error is also using the ub.sesion.rollback
+    #The log.error("Settings DB is not Writeable")
+    #The return type is edit_scheduledtask()
         except OperationalError:
             ub.session.rollback()
             log.error("Settings DB is not Writeable")
@@ -1602,10 +1602,10 @@ def update_scheduledtasks():
     return edit_scheduledtasks()
 
 
-@admi.route("/admin/user/<int:user_id>", methods=["GET", "POST"])
-@user_login_required
-@admin_required
-def edit_user(user_id):
+    @admi.route("/admin/user/<int:user_id>", methods=["GET", "POST"])
+    @user_login_required
+    @admin_required
+    def edit_user(user_id):
     content = ub.session.query(ub.User).filter(ub.User.id == int(user_id)).first()  # type: ub.User
     if not content or (not config.config_anonbrowse and content.name == "Guest"):
         flash(_("User not found"), category="error")
@@ -1619,22 +1619,22 @@ def edit_user(user_id):
         if resp:
             return resp
     return render_title_template("user_edit.html",
-                                 translations=translations,
-                                 languages=languages,
-                                 new_user=0,
-                                 content=content,
-                                 config=config,
-                                 registered_oauth=oauth_check,
-                                 mail_configured=config.get_mail_server_configured(),
-                                 kobo_support=kobo_support,
-                                 title=_("Edit User %(nick)s", nick=content.name),
-                                 page="edituser")
+                                    translations=translations,
+                                    languages=languages,
+                                    new_user=0,
+                                    content=content,
+                                    config=config,
+                                    registered_oauth=oauth_check,
+                                    mail_configured=config.get_mail_server_configured(),
+                                    kobo_support=kobo_support,
+                                    title=_("Edit User %(nick)s", nick=content.name),
+                                    page="edituser")
 
 
-@admi.route("/admin/resetpassword/<int:user_id>", methods=["POST"])
-@user_login_required
-@admin_required
-def reset_user_password(user_id):
+    @admi.route("/admin/resetpassword/<int:user_id>", methods=["POST"])
+    @user_login_required
+    @admin_required
+    def reset_user_password(user_id):
     if current_user is not None and current_user.is_authenticated:
         ret, message = reset_password(user_id)
         if ret == 1:
@@ -1649,40 +1649,40 @@ def reset_user_password(user_id):
     return redirect(url_for('admin.admin'))
 
 
-@admi.route("/admin/logfile")
-@user_login_required
-@admin_required
-def view_logfile():
+    @admi.route("/admin/logfile")
+    @user_login_required
+    @admin_required
+    def view_logfile():
     logfiles = {0: logger.get_logfile(config.config_logfile),
                 1: logger.get_accesslogfile(config.config_access_logfile)}
     return render_title_template("logviewer.html",
-                                 title=_("Logfile viewer"),
-                                 accesslog_enable=config.config_access_log,
-                                 log_enable=bool(config.config_logfile != logger.LOG_TO_STDOUT),
-                                 logfiles=logfiles,
-                                 page="logfile")
+                                    title=_("Logfile viewer"),
+                                    accesslog_enable=config.config_access_log,
+                                    log_enable=bool(config.config_logfile != logger.LOG_TO_STDOUT),
+                                    logfiles=logfiles,
+                                    page="logfile")
 
 
-@admi.route("/ajax/log/<int:logtype>")
-@user_login_required
-@admin_required
-def send_logfile(logtype):
+    @admi.route("/ajax/log/<int:logtype>")
+    @user_login_required
+    @admin_required
+    def send_logfile(logtype):
     if logtype == 1:
         logfile = logger.get_accesslogfile(config.config_access_logfile)
         return send_from_directory(os.path.dirname(logfile),
-                                   os.path.basename(logfile))
+                                    os.path.basename(logfile))
     if logtype == 0:
         logfile = logger.get_logfile(config.config_logfile)
         return send_from_directory(os.path.dirname(logfile),
-                                   os.path.basename(logfile))
+                                    os.path.basename(logfile))
     else:
         return ""
 
 
-@admi.route("/admin/logdownload/<int:logtype>")
-@user_login_required
-@admin_required
-def download_log(logtype):
+    @admi.route("/admin/logdownload/<int:logtype>")
+    @user_login_required
+    @admin_required
+    def download_log(logtype):
     if logtype == 0:
         file_name = logger.get_logfile(config.config_logfile)
     elif logtype == 1:
@@ -1694,17 +1694,17 @@ def download_log(logtype):
     abort(404)
 
 
-@admi.route("/admin/debug")
-@user_login_required
-@admin_required
-def download_debug():
+    @admi.route("/admin/debug")
+    @user_login_required
+    @admin_required
+    def download_debug():
     return debug_info.send_debug()
 
 
-@admi.route("/get_update_status", methods=['GET'])
-@user_login_required
-@admin_required
-def get_update_status():
+    @admi.route("/get_update_status", methods=['GET'])
+    @user_login_required
+    @admin_required
+    def get_update_status():
     if feature_support['updater']:
         log.info("Update status requested")
         return updater_thread.get_available_updates(request.method)
@@ -1712,10 +1712,10 @@ def get_update_status():
         return ''
 
 
-@admi.route("/get_updater_status", methods=['GET', 'POST'])
-@user_login_required
-@admin_required
-def get_updater_status():
+    @admi.route("/get_updater_status", methods=['GET', 'POST'])
+    @user_login_required
+    @admin_required
+    def get_updater_status():
     status = {}
     if feature_support['updater']:
         if request.method == "POST":
@@ -1751,7 +1751,7 @@ def get_updater_status():
     return ''
 
 
-def ldap_import_create_user(user, user_data):
+    def ldap_import_create_user(user, user_data):
     user_login_field = extract_dynamic_field_from_filter(user, config.config_ldap_user_object)
 
     try:
@@ -1807,10 +1807,10 @@ def ldap_import_create_user(user, user_data):
         return 0, message
 
 
-@admi.route('/import_ldap_users', methods=["POST"])
-@user_login_required
-@admin_required
-def import_ldap_users():
+    @admi.route('/import_ldap_users', methods=["POST"])
+    @user_login_required
+    @admin_required
+    def import_ldap_users():
     showtext = {}
     try:
         new_users = services.ldap.get_group_members(config.config_ldap_group_name)
@@ -1862,23 +1862,23 @@ def import_ldap_users():
     return json.dumps(showtext)
 
 
-@admi.route("/ajax/canceltask", methods=['POST'])
-@user_login_required
-@admin_required
-def cancel_task():
+    @admi.route("/ajax/canceltask", methods=['POST'])
+    @user_login_required
+    @admin_required
+    def cancel_task():
     task_id = request.get_json().get('task_id', None)
     worker = WorkerThread.get_instance()
     worker.end_task(task_id)
     return ""
 
 
-def _db_simulate_change():
+    def _db_simulate_change():
     param = request.form.to_dict()
     to_save = dict()
     to_save['config_calibre_dir'] = strip_whitespaces(re.sub(r'[\\/]metadata\.db$',
-                                           '',
-                                           param['config_calibre_dir'],
-                                           flags=re.IGNORECASE))
+                                            '',
+                                            param['config_calibre_dir'],
+                                            flags=re.IGNORECASE))
     db_valid, db_change = calibre_db.check_valid_db(to_save["config_calibre_dir"],
                                                     ub.app_DB_path,
                                                     config.config_calibre_uuid)
@@ -1886,15 +1886,15 @@ def _db_simulate_change():
     return db_change, db_valid
 
 
-def _db_configuration_update_helper():
+    def _db_configuration_update_helper():
     db_change = False
     to_save = request.form.to_dict()
     gdrive_error = None
 
     to_save['config_calibre_dir'] = re.sub(r'[\\/]metadata\.db$',
-                                           '',
-                                           to_save['config_calibre_dir'],
-                                           flags=re.IGNORECASE)
+                                            '',
+                                            to_save['config_calibre_dir'],
+                                            flags=re.IGNORECASE)
     db_valid = False
     try:
         db_change, db_valid = _db_simulate_change()
@@ -1921,7 +1921,7 @@ def _db_configuration_update_helper():
             _config_string(to_save, "config_calibre_split_dir")
 
     if db_change or not db_valid or not config.db_configured \
-      or config.config_calibre_dir != to_save["config_calibre_dir"]:
+        or config.config_calibre_dir != to_save["config_calibre_dir"]:
         if not os.path.exists(metadata_db) or not to_save['config_calibre_dir']:
             return _db_configuration_result(_('DB Location is not Valid, Please Enter Correct Path'), gdrive_error)
         else:
@@ -1949,7 +1949,7 @@ def _db_configuration_update_helper():
     return _db_configuration_result(None, gdrive_error)
 
 
-def _configuration_update_helper():
+    def _configuration_update_helper():
     reboot_required = False
     to_save = request.form.to_dict()
     try:
@@ -2009,7 +2009,7 @@ def _configuration_update_helper():
         _config_string(to_save, "config_goodreads_api_key")
         if services.goodreads_support:
             services.goodreads_support.connect(config.config_goodreads_api_key,
-                                               config.config_use_goodreads)
+                                                config.config_use_goodreads)
 
         _config_int(to_save, "config_updatechannel")
 
@@ -2062,7 +2062,7 @@ def _configuration_update_helper():
     return _configuration_result(None, reboot_required)
 
 
-def _configuration_result(error_flash=None, reboot=False):
+    def _configuration_result(error_flash=None, reboot=False):
     resp = {}
     if error_flash:
         log.error(error_flash)
@@ -2075,7 +2075,7 @@ def _configuration_result(error_flash=None, reboot=False):
     return Response(json.dumps(resp), mimetype='application/json')
 
 
-def _db_configuration_result(error_flash=None, gdrive_error=None):
+    def _db_configuration_result(error_flash=None, gdrive_error=None):
     gdrive_authenticate = not is_gdrive_ready()
     gdrivefolders = []
     if not gdrive_error and config.config_use_google_drive:
@@ -2095,15 +2095,15 @@ def _db_configuration_result(error_flash=None, gdrive_error=None):
         flash(_("Database Settings updated"), category="success")
 
     return render_title_template("config_db.html",
-                                 config=config,
-                                 show_authenticate_google_drive=gdrive_authenticate,
-                                 gdriveError=gdrive_error,
-                                 gdrivefolders=gdrivefolders,
-                                 feature_support=feature_support,
-                                 title=_("Database Configuration"), page="dbconfig")
+                                    config=config,
+                                    show_authenticate_google_drive=gdrive_authenticate,
+                                    gdriveError=gdrive_error,
+                                    gdrivefolders=gdrivefolders,
+                                    feature_support=feature_support,
+                                    title=_("Database Configuration"), page="dbconfig")
 
 
-def _handle_new_user(to_save, content, languages, translations, kobo_support):
+    def _handle_new_user(to_save, content, languages, translations, kobo_support):
     content.default_language = to_save["default_language"]
     content.locale = to_save.get("locale", content.locale)
 
@@ -2128,10 +2128,10 @@ def _handle_new_user(to_save, content, languages, translations, kobo_support):
     except Exception as ex:
         flash(str(ex), category="error")
         return render_title_template("user_edit.html", new_user=1, content=content,
-                                     config=config,
-                                     translations=translations,
-                                     languages=languages, title=_("Add new user"), page="newuser",
-                                     kobo_support=kobo_support, registered_oauth=oauth_check)
+                                        config=config,
+                                        translations=translations,
+                                        languages=languages, title=_("Add new user"), page="newuser",
+                                        kobo_support=kobo_support, registered_oauth=oauth_check)
     try:
         content.allowed_tags = config.config_allowed_tags
         content.denied_tags = config.config_denied_tags
@@ -2154,7 +2154,7 @@ def _handle_new_user(to_save, content, languages, translations, kobo_support):
         flash(_("Oops! Database Error: %(error)s.", error=e.orig), category="error")
 
 
-def _delete_user(content):
+    def _delete_user(content):
     if ub.session.query(ub.User).filter(ub.User.role.op('&')(constants.ROLE_ADMIN) == constants.ROLE_ADMIN,
                                         ub.User.id != content.id).count():
         if content.name != "Guest":
@@ -2186,7 +2186,7 @@ def _delete_user(content):
         raise Exception(_("No admin user remaining, can't delete user"))
 
 
-def _handle_edit_user(to_save, content, languages, translations, kobo_support):
+    def _handle_edit_user(to_save, content, languages, translations, kobo_support):
     if to_save.get("delete"):
         try:
             flash(_delete_user(content), category="success")
@@ -2252,16 +2252,16 @@ def _handle_edit_user(to_save, content, languages, translations, kobo_support):
             log.error(ex)
             flash(str(ex), category="error")
             return render_title_template("user_edit.html",
-                                         translations=translations,
-                                         languages=languages,
-                                         mail_configured=config.get_mail_server_configured(),
-                                         kobo_support=kobo_support,
-                                         new_user=0,
-                                         content=content,
-                                         config=config,
-                                         registered_oauth=oauth_check,
-                                         title=_("Edit User %(nick)s", nick=content.name),
-                                         page="edituser")
+                                            translations=translations,
+                                            languages=languages,
+                                            mail_configured=config.get_mail_server_configured(),
+                                            kobo_support=kobo_support,
+                                            new_user=0,
+                                            content=content,
+                                            config=config,
+                                            registered_oauth=oauth_check,
+                                            title=_("Edit User %(nick)s", nick=content.name),
+                                            page="edituser")
     try:
         ub.session_commit()
         flash(_("User '%(nick)s' updated", nick=content.name), category="success")
@@ -2276,7 +2276,7 @@ def _handle_edit_user(to_save, content, languages, translations, kobo_support):
     return ""
 
 
-def extract_user_data_from_field(user, field):
+    def extract_user_data_from_field(user, field):
     match = re.search(field + r"=([@\.\d\s\w-]+)", user, re.IGNORECASE | re.UNICODE)
     if match:
         return match.group(1)
@@ -2284,7 +2284,7 @@ def extract_user_data_from_field(user, field):
         raise Exception("Could Not Parse LDAP User: {}".format(user))
 
 
-def extract_dynamic_field_from_filter(user, filtr):
+    def extract_dynamic_field_from_filter(user, filtr):
     match = re.search("([a-zA-Z0-9-]+)=%s", filtr, re.IGNORECASE | re.UNICODE)
     if match:
         return match.group(1)
@@ -2292,6 +2292,6 @@ def extract_dynamic_field_from_filter(user, filtr):
         raise Exception("Could Not Parse LDAP Userfield: {}", user)
 
 
-def extract_user_identifier(user, filtr):
+    def extract_user_identifier(user, filtr):
     dynamic_field = extract_dynamic_field_from_filter(user, filtr)
     return extract_user_data_from_field(user, dynamic_field)
