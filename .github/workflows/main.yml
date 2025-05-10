@@ -67,10 +67,9 @@ jobs:
 
     - name: Deploy to server
       run: |
-        ssh sathishkumar@192.168.247.64 << 'EOF'
-          cd ~/GetMyEbookWeb
-          git pull origin main
-          docker-compose down
-          docker-compose up -d --build
-        EOF
-     
+         ssh localhost << 'EOF'
+           cd ~/GetMyEbookWeb
+           git pull origin main
+           docker-compose down
+           docker-compose up -d --build
+         EOF
