@@ -65,11 +65,17 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Deploy to server
+    - name: 🛡️ Add server to known hosts
       run: |
-         ssh localhost << 'EOF'
-           cd ~/GetMyEbookWeb
-           git pull origin main
-           docker-compose down
-           docker-compose up -d --build
-         EOF
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts
+
+    - name: 🚀 Deploy to local server
+      run: |
+        ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_rsa sathishkumar@localhost << 'EOF'
+          cd ~/GetMyEbookWeb
+          git pull origin main
+          docker-compose down
+          docker-compose up -d --build
+        EOF
