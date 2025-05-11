@@ -54,15 +54,15 @@ jobs:
 
   deploy:
     needs: docker-build
-    runs-on: self-hosted  # Use your local runner
+    runs-on: self-hosted
 
     steps:
     - name: 📂 Checkout code
       uses: actions/checkout@v3
 
-    - name: 🚀 Deploy locally (no SSH)
+    - name: 🚀 Deploy with Docker Compose
       run: |
-        cd ~/GetMyEbookWeb
-        git pull origin main
-        docker-compose down
-        docker-compose up -d --build
+        # Replace placeholder in compose file
+        sed -i "s/\$DOCKER_USERNAME/${{ secrets.DOCKER_USERNAME }}/" docker-compose.yml
+        docker-compose down || true
+        docker-compose up -d
